@@ -2,6 +2,51 @@ import data
 from data import fetch_current_price, fetch_historical_data, fetch_fundamentals
 import pprint
 
+def _volatility_to_risk(score: float):
+    if score < 0.3:
+        return "low", "Low daily price movement indicating stable behavior"
+    elif score < 0.6:
+        return "medium", "Moderate daily price swings indicating average risk"
+    else:
+        return "high", "High daily price swings over the last few months"
+
+from ml import compute_volatility
+from data import fetch_historical_data
+import data
+
+def predict_volatility(ticker_symbol: str):
+    df = fetch_historical_data(ticker_symbol, period="3mo", interval="1d")
+
+    if df is None:
+        return {
+            "status": "error",
+            "message": "Historical data unavailable",
+            "symbol": ticker_symbol
+        }
+
+    score = compute_volatility(df)
+
+    if score is None:
+        return {
+            "status": "error",
+            "message": "Volatility calculation failed",
+            "symbol": ticker_symbol
+        }
+
+    risk_level, explanation = _volatility_to_risk(score)
+
+    return {
+        "status": "success",
+        "symbol": ticker_symbol,
+        "company": data.supported_tickers[ticker_symbol],
+        "volatility_score": round(score, 3),
+        "risk_level": risk_level,
+        "explanation": explanation,
+        "lookback_period": "3 months",
+        "method": "std_dev_of_daily_returns"
+    }
+
+
 def get_current_price(ticker_symbol: str):
     price = fetch_current_price(ticker_symbol)
 
