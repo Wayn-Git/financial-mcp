@@ -24,9 +24,11 @@ supported_tickers = {
     "WMT": "Walmart",
 }
 
+Error = f"Symbol Not Found In Our List: {supported_tickers}"
+
 def fetch_current_price(ticker_symbol: str):
     if ticker_symbol not in supported_tickers:
-        return None
+        return Error
     
     ticker = Ticker(ticker_symbol)
     if ticker.fast_info is None:
@@ -36,7 +38,7 @@ def fetch_current_price(ticker_symbol: str):
 
 def fetch_historical_data(ticker_symbol: str, period: str = "1mo", interval: str = "1d"):
     if ticker_symbol not in supported_tickers:
-        return None
+        return Error
 
     ticker = Ticker(ticker_symbol)
     hist = ticker.history(period=period, interval=interval)
