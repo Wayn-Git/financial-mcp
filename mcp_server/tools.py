@@ -1,6 +1,18 @@
 import data
-from data import fetch_current_price, fetch_historical_data, fetch_fundamentals
-import pprint
+from data import (
+    fetch_current_price,
+    fetch_historical_data,
+    fetch_fundamentals,
+)
+
+from ml import (
+    compute_volatility,
+    predict_trend,
+)
+
+# -------------------------
+# Helper: Volatility → Risk
+# -------------------------
 
 def _volatility_to_risk(score: float):
     if score < 0.3:
@@ -10,9 +22,91 @@ def _volatility_to_risk(score: float):
     else:
         return "high", "High daily price swings over the last few months"
 
-from ml import compute_volatility
-from data import fetch_historical_data
-import data
+
+# -------------------------
+# Tool: Current Price
+# -------------------------
+
+def get_current_price(ticker_symbol: str):
+    price = fetch_current_price(ticker_symbol)
+
+    if price is None:
+        return {
+            "status": "error",
+            "message": "Ticker not supported or price unavailable",
+            "symbol": ticker_symbol
+        }
+
+    return {
+        "status": "success",
+        "symbol": ticker_symbol,
+        "company": data.supported_tickers[ticker_symbol],
+        "price": float(price),
+        "currency": "USD"
+    }
+
+
+# -------------------------
+# Tool: Historical Summary
+# -------------------------
+
+def get_historical_data(
+    ticker_symbol: str,
+    period: str = "1mo",
+    interval: str = "1d"
+):
+    df = fetch_historical_data(ticker_symbol, period, interval)
+
+    if df is None:
+        return {
+            "status": "error",
+            "message": "Ticker not supported or historical data unavailable",
+            "symbol": ticker_symbol
+        }
+
+    summary = {
+        "start_date": str(df.index[0].date()),
+        "end_date": str(df.index[-1].date()),
+        "data_points": len(df),
+        "last_close": float(df["Close"].iloc[-1])
+    }
+
+    return {
+        "status": "success",
+        "symbol": ticker_symbol,
+        "company": data.supported_tickers[ticker_symbol],
+        "period": period,
+        "interval": interval,
+        "summary": summary
+    }
+
+
+# -------------------------
+# Tool: Fundamentals
+# -------------------------
+
+def get_fundamentals(ticker_symbol: str):
+    fundamentals = fetch_fundamentals(ticker_symbol)
+
+    if fundamentals is None:
+        return {
+            "status": "error",
+            "message": "Ticker not supported or fundamentals unavailable",
+            "symbol": ticker_symbol
+        }
+
+    return {
+        "status": "success",
+        "symbol": ticker_symbol,
+        "company": data.supported_tickers[ticker_symbol],
+        "fundamentals": fundamentals,
+        "currency": "USD"
+    }
+
+
+# -------------------------
+# Tool: Volatility Prediction
+# -------------------------
 
 def predict_volatility(ticker_symbol: str):
     df = fetch_historical_data(ticker_symbol, period="3mo", interval="1d")
@@ -47,68 +141,43 @@ def predict_volatility(ticker_symbol: str):
     }
 
 
-def get_current_price(ticker_symbol: str):
-    price = fetch_current_price(ticker_symbol)
+# -------------------------
+# Tool: Price Trend Prediction
+# -------------------------
 
-    if price == None:
-        return {
-            "status": "error",
-            "message": "Ticker Not Supported or Price Unavailable",
-            "symbol": ticker_symbol
-        }
-    return {
-        "status": "success",
-        "symbol": ticker_symbol,
-        "company": data.supported_tickers[ticker_symbol],
-        "price": price,
-        "currency": "USD"
-    }
-
-
-
-
-def get_historical_data(ticker_symbol: str, period: str = "1mo", interval: str = "1d"):
-    df = fetch_historical_data(ticker_symbol, period, interval)
+def predict_price_trend(ticker_symbol: str):
+    df = fetch_historical_data(ticker_symbol, period="6mo", interval="1d")
 
     if df is None:
         return {
             "status": "error",
-            "message": "Ticker not supported or historical data unavailable",
+            "message": "Historical data unavailable",
             "symbol": ticker_symbol
         }
 
-    summary = {
-        "start_date": str(df.index[0].date()),
-        "end_date": str(df.index[-1].date()),
-        "data_points": len(df),
-        "last_close": float(df["Close"].iloc[-1])
-    }
+    trend, confidence = predict_trend(df)
 
-    return {
-        "status": "success",
-        "symbol": ticker_symbol,
-        "company": data.supported_tickers[ticker_symbol],
-        "period": period,
-        "interval": interval,
-        "summary": summary
-    }
-
-
-    
-def get_fundamentals(ticker_symbol: str):
-    fundamentals = fetch_fundamentals(ticker_symbol)
-
-    if fundamentals == None:
+    if trend is None:
         return {
             "status": "error",
-            "message": "Ticker Not Supported or Company Fundamentals Unavailable",
+            "message": "Trend calculation failed",
             "symbol": ticker_symbol
         }
+
+    if trend == "up":
+        explanation = "Short-term average price is above long-term average, indicating upward momentum"
+    elif trend == "down":
+        explanation = "Short-term average price is below long-term average, indicating downward momentum"
+    else:
+        explanation = "Short-term and long-term averages are similar, indicating sideways movement"
+
     return {
         "status": "success",
         "symbol": ticker_symbol,
         "company": data.supported_tickers[ticker_symbol],
-        "fundamentals": fundamentals,
-        "currency": "USD"
+        "trend": trend,
+        "confidence": round(confidence, 3),
+        "explanation": explanation,
+        "method": "moving_average_crossover",
+        "lookback_period": "6 months"
     }
-    
