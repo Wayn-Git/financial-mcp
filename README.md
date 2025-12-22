@@ -1,35 +1,92 @@
-## System Overview (Mental Model)
+# FintelAI - AI-Powered Financial Intelligence Platform
 
- #### Roles clearly separated:
+## System Architecture
+```
+User Query → LLM Controller → MCP Server → Yahoo Finance
+                ↓                ↓
+           Groq LLM        ML Models
+                ↓                ↓
+           Analysis ← Financial Data
+```
 
-  - Yahoo Finance → Raw financial & price data
+### Component Roles
 
-  - MCP Server → Fetches data + runs ML models
+- **Yahoo Finance**: Raw financial & market data source
+- **MCP Server**: Data fetching + ML predictions (volatility, trends)
+- **LLM Controller**: Query routing, decision logic, conversational analysis
+- **Groq LLM**: Financial reasoning, comparison, natural language responses
 
-  - ML Models → Forecast, volatility, anomaly, scoring
+**The LLM never touches Yahoo Finance directly—only through MCP tools.**
 
-  - LLM → Analyst brain (reasoning, comparison, explanation)
+---
 
- The LLM NEVER touches Yahoo Finance directly. <br>
- It only talks to MCP functions.
+## Available Financial Data
 
-## Data Being Pulled From Yahoo Finance
+### Real-Time Market Data
+- Current Price, Open, High, Low, Close
+- Volume, Adjusted Close
+- Intraday movements
 
-1. Price & Market Data
-- Current Price
-- Open High low Close
-- Volume
-- Adjusted Close
+### Historical Data
+- Daily, Weekly, Monthly candles
+- Configurable periods (1d, 5d, 1mo, 3mo, 1y, max)
 
-2. Historical Data
-- Daily Candles
-- Weekly Candles
-- Monthly Candles
+### Company Fundamentals
+- Market Cap, P/E Ratio, EPS
+- Revenue, Debt-to-Equity
+- Profit Margins, Dividend Yield
 
-3. Company Fundamentals 
-- Market Cap 
-- PE ratio
-- EPS
-- Revenue
-- Debt 
-- Profit Margin
+### ML Predictions
+- **Price Trend Forecasting**: 7-day LSTM predictions
+- **Volatility Analysis**: Risk scoring based on historical volatility
+- **Anomaly Detection**: Unusual price movements
+
+---
+
+## MCP Tools
+
+| Tool | Purpose | Returns |
+|------|---------|---------|
+| `get_current_price` | Live stock price | Price, change %, volume |
+| `get_fundamentals` | Company metrics | Market cap, P/E, EPS, debt |
+| `predict_price_trend` | 7-day forecast | Predicted prices, confidence |
+| `predict_volatility` | Risk assessment | Volatility score, risk level |
+
+---
+
+## Tech Stack
+
+**Frontend**: React, Tailwind CSS, Lucide Icons  
+**Backend**: FastAPI (LLM Controller + MCP Server)  
+**LLM**: Groq (llama-3.3-70b-versatile)  
+**Data**: Yahoo Finance (yfinance)  
+**ML**: scikit-learn, LSTM (TensorFlow/Keras)
+
+---
+
+## Key Features
+
+✅ **Smart Query Routing**: Code-enforced rules override LLM for precision  
+✅ **Multi-Stock Comparison**: Analyze multiple tickers simultaneously  
+✅ **Conversational Memory**: Context-aware responses (10-message history)  
+✅ **Cold Start Handling**: Auto-retry logic for Render free tier  
+✅ **ML-Powered Insights**: Predictive analytics, not just data retrieval  
+
+---
+
+## Usage Examples
+
+- *"What's Tesla's current price?"* → `get_current_price`
+- *"Compare Apple vs Microsoft fundamentals"* → `get_fundamentals`
+- *"Is Nvidia risky right now?"* → `predict_volatility`
+- *"What's the trend for Amazon?"* → `predict_price_trend`
+
+---
+
+## Deployment
+
+**MCP Server**: Render (https://financial-mcp.onrender.com)  
+**LLM Controller**: Render (https://llm-mcp-financial.onrender.com)  
+**Frontend**: Vercel (https://financial-mcp-vert.vercel.app)
+
+**Note**: Free tier servers may cold start (30-60s on first request). Frontend includes automatic warmup.
